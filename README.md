@@ -1,2 +1,2 @@
-Bot : @im_dars_jadvali_bot /n
+Bot : @im_dars_jadvali_bot               
 Creator : t.me/xlertuzb
