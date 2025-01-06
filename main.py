@@ -2,7 +2,7 @@ from telebot import TeleBot
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 from telebot.apihelper import ApiTelegramException
 
-API_TOKEN = "7743651084:AAGZVOYj4XVXcM8l_C5nX-Nw_wb2cl5kWww"
+API_TOKEN = "revoked"
 CHANNEL_ID = "-1002464209662"
 SCHEDULE_MESSAGE_IDS = {
     "5-A": {
