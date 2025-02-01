@@ -4,8 +4,8 @@ from aiogram.utils import executor
 import os
 from aiohttp import web
 
-TOKEN = 'YOUR_BOT_TOKEN'
-WEBHOOK_URL = "https://YOUR_SERVER_URL/webhook"  # O'zingizning server URL
+TOKEN = '7743651084:AAG1yZesza5dkkipyhg9Iw6nJeLkBCrxcYc'
+WEBHOOK_URL = "https://dars_jadval/webhook"  # O'zingizning server URL
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher(bot)
