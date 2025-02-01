@@ -3,14 +3,21 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.utils import executor
 import os
 from aiohttp import web
+from dotenv import load_dotenv
 
-TOKEN = '7743651084:AAG1yZesza5dkkipyhg9Iw6nJeLkBCrxcYc'
-WEBHOOK_URL = "https://dars_jadval/webhook"  # O'zingizning server URL
+# .env faylini o'qish
+load_dotenv()
 
-bot = Bot(token=TOKEN)
+# Bot Token va Webhook URL ni .env faylidan o'qish
+BOT_TOKEN = os.getenv('BOT_TOKEN')
+WEBHOOK_URL = os.getenv('WEBHOOK_URL')
+
+bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher(bot)
 
-async def on_start(message: types.Message):
+# Start komandasiga javob
+@dp.message_handler(commands=['start'])
+async def start(message: types.Message):
     keyboard = InlineKeyboardMarkup().add(
         InlineKeyboardButton(
             text="📅 Web App'ni ochish",
@@ -18,10 +25,6 @@ async def on_start(message: types.Message):
         )
     )
     await message.answer("📢 Web App'ni ochish uchun tugmani bosing:", reply_markup=keyboard)
-
-@dp.message_handler(commands=['start'])
-async def start(message: types.Message):
-    await on_start(message)
 
 # Webhookni sozlash
 async def on_webhook(request):
@@ -44,6 +47,6 @@ def start_server():
 if __name__ == "__main__":
     import asyncio
     loop = asyncio.get_event_loop()
-    loop.create_task(set_webhook())
-    loop.run_in_executor(None, start_server)
+    loop.create_task(set_webhook())  # Webhookni sozlash
+    loop.run_in_executor(None, start_server)  # Serverni ishga tushirish
     executor.start_polling(dp, skip_updates=True)
