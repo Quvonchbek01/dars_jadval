@@ -3,7 +3,7 @@ import asyncio
 from aiogram import Bot, Dispatcher, types, Router
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo, Update
 from aiogram.filters import Command
-from aiogram.utils.callback_data import CallbackData  # ✅ CallbackData ni to‘g‘ri joyidan import qildik
+from aiogram.filters.callback_data import CallbackData  # ✅ CallbackData ni to‘g‘ri joyidan import qildik
 from aiohttp import web
 from dotenv import load_dotenv
 
