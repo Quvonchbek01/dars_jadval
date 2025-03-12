@@ -9,10 +9,12 @@ from dotenv import load_dotenv
 # .env faylini yuklash
 load_dotenv()
 
-# Bot Token va Webhook URL ni olish
+# Muhit o'zgaruvchilari (Token va Webhook URL)
 BOT_TOKEN = os.getenv('BOT_TOKEN')
 WEBHOOK_URL = os.getenv('WEBHOOK_URL')
-PORT = int(os.getenv("PORT", 5000))  # Render $PORT ni avtomatik oladi
+
+# Render tomonidan ajratilgan portni olish (agar yo‘q bo‘lsa, 10000 ni ishlatish)
+PORT = int(os.getenv("PORT", 10000))
 
 # Bot va Dispatcher yaratish
 bot = Bot(token=BOT_TOKEN)
@@ -41,6 +43,7 @@ async def on_webhook(request):
 # Webhookni sozlash
 async def set_webhook():
     await bot.set_webhook(WEBHOOK_URL)
+    print(f"✅ Webhook o‘rnatildi: {WEBHOOK_URL}")
 
 # Webhook serverni ishga tushirish
 async def start_webhook():
@@ -51,8 +54,17 @@ async def start_webhook():
 
     runner = web.AppRunner(app)
     await runner.setup()
-    site = web.TCPSite(runner, host="0.0.0.0", port=PORT)  # $PORT ishlatilmoqda
+    site = web.TCPSite(runner, host="0.0.0.0", port=PORT)
     await site.start()
+    
+    print(f"🚀 Server {PORT} portda ishlayapti...")
+
+    # Bot sessiyasini yopish (Unclosed connector muammosini hal qilish)
+    try:
+        await asyncio.Event().wait()  # Serverni cheksiz ishlashga majbur qilish
+    finally:
+        await bot.session.close()
+        print("🔴 Bot sessiyasi yopildi!")
 
 # Webhook serverni ishga tushirish
 if __name__ == "__main__":
