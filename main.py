@@ -3,6 +3,7 @@ import asyncio
 from aiogram import Bot, Dispatcher, types, Router
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo, Update
 from aiogram.filters import Command
+from aiogram.utils.callback_data import CallbackData
 from aiohttp import web
 from dotenv import load_dotenv
 
@@ -22,9 +23,26 @@ router = Router()
 dp = Dispatcher()
 dp.include_router(router)
 
+# CallbackData obyektini yaratamiz
+web_callback = CallbackData("web", "action")
+
 # /start komandasiga javob
 @router.message(Command("start"))
 async def start(message: types.Message):
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text="🌍 Web App'ni ochish", callback_data=web_callback.new(action="open_web"))
+    ]])
+    await message.answer("Assalomu alaykum. Dars jadvalini Web app orqali ko'rishingiz mumkin.", reply_markup=keyboard)
+
+# Callback ni tutib olish
+@router.callback_query(web_callback.filter(action="open_web"))
+async def web_callback_handler(callback: types.CallbackQuery):
+    await callback.message.answer("/web")  # Bot avtomatik `/web` komandasi yuboradi
+    await callback.answer()  # Tugmachani bosgandan keyin yuklash animatsiyasini yopish
+
+# /web komandasiga javob
+@router.message(Command("web"))
+async def web1(message: types.Message):
     keyboard = InlineKeyboardMarkup(inline_keyboard=[[
         InlineKeyboardButton(
             text="📅 Web App'ni ochish",
