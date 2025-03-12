@@ -25,12 +25,12 @@ dp.include_router(router)
 # /start komandasiga javob
 @router.message(Command("start"))
 async def start(message: types.Message):
-    keyboard = InlineKeyboardMarkup().add(
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[[
         InlineKeyboardButton(
             text="📅 Web App'ni ochish",
             web_app=WebAppInfo(url="https://imjadval.netlify.app")
         )
-    )
+    ]])
     await message.answer("📢 Web App'ni ochish uchun tugmani bosing:", reply_markup=keyboard)
 
 # Webhook orqali kelgan so‘rovlarni qabul qilish
