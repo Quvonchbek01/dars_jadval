@@ -1,6 +1,6 @@
 import os
 import asyncio
-from aiogram import Bot, Dispatcher, types, Router
+from aiogram import Bot, Dispatcher, types, Router, F
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton,ReplyKeyboardMarkup, KeyboardButton, WebAppInfo, Update
 from aiogram.filters import Command
 from aiogram.filters.callback_data import CallbackData  # ✅ CallbackData ni to‘g‘ri joyidan import qildik
