@@ -1,26 +1,31 @@
 import os
-from aiogram import Bot, Dispatcher, types
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+import asyncio
+from aiogram import Bot, Dispatcher, types, Router
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
+from aiogram.fsm.storage.memory import MemoryStorage
 from aiohttp import web
 from dotenv import load_dotenv
 
 # .env faylini yuklash
 load_dotenv()
 
-# Bot Token va Webhook URL ni .env faylidan olish
+# Bot Token va Webhook URL ni olish
 BOT_TOKEN = os.getenv('BOT_TOKEN')
 WEBHOOK_URL = os.getenv('WEBHOOK_URL')
 
+# Bot va Dispatcher yaratish
 bot = Bot(token=BOT_TOKEN)
-dp = Dispatcher(bot)
+dp = Dispatcher(storage=MemoryStorage())
+router = Router()
+dp.include_router(router)
 
 # /start komandasiga javob
-@dp.message_handler(commands=['start'])
+@router.message(types.Message, commands=["start"])
 async def start(message: types.Message):
     keyboard = InlineKeyboardMarkup().add(
         InlineKeyboardButton(
             text="📅 Web App'ni ochish",
-            web_app=types.WebAppInfo(url="https://imjadval.netlify.app")
+            web_app=WebAppInfo(url="https://imjadval.netlify.app")
         )
     )
     await message.answer("📢 Web App'ni ochish uchun tugmani bosing:", reply_markup=keyboard)
@@ -28,8 +33,8 @@ async def start(message: types.Message):
 # Webhook orqali kelgan so‘rovlarni qabul qilish
 async def on_webhook(request):
     json_str = await request.json()
-    update = types.Update(**json_str)
-    await dp.process_update(update)
+    update = types.Update.model_validate(json_str)
+    await dp._process_update(update)
     return web.Response()
 
 # Webhookni sozlash
@@ -50,5 +55,4 @@ async def start_webhook():
 
 # Webhook serverni ishga tushirish
 if __name__ == "__main__":
-    import asyncio
     asyncio.run(start_webhook())
