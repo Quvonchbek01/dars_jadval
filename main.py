@@ -1,7 +1,7 @@
 import os
 import asyncio
 from aiogram import Bot, Dispatcher, types, Router
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo, Update
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton,ReplyKeyboardMarkup, KeyboardButton, WebAppInfo, Update
 from aiogram.filters import Command
 from aiogram.filters.callback_data import CallbackData  # ✅ CallbackData ni to‘g‘ri joyidan import qildik
 from aiohttp import web
@@ -25,13 +25,21 @@ dp.include_router(router)
 
 @router.message(Command("start"))
 async def start(message: types.Message):
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[[
-        InlineKeyboardButton(text="🌐 Dars jadvali", switch_inline_query_current_chat="/web")
-    ]])
+    keyboard = ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="Web app'ni ochish")]
+        ],
+        resize_keyboard=True
+    )
     await message.answer(
-        "Assalomu alaykum. Dars jadvalini Web app orqali ko'rishingiz mumkin.\n\n"
-        "📢 Web appga kirish uchun pastdagi tugmani bosing yoki /web xabarini yuboring:", 
-        reply_markup=keyboard)
+        "Assalomu alaykum! Dars jadvalini Web App orqali ko‘rishingiz mumkin.\n\n"
+        "📢 Ochish uchun pastdagi tugmani bosing yoki /web buyrug‘ini yuboring:", 
+        reply_markup=keyboard
+    )
+
+@router.message(F.text == "Web app'ni ochish")
+async def open_web(message: types.Message):
+    await message.answer("/web")
 # /web komandasiga javob
 @router.message(Command("web"))
 async def web1(message: types.Message):
