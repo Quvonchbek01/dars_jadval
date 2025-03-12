@@ -25,21 +25,9 @@ dp.include_router(router)
 
 @router.message(Command("start"))
 async def start(message: types.Message):
-    keyboard = ReplyKeyboardMarkup(
-        keyboard=[
-            [KeyboardButton(text="🌐 Web app'ni ochish")]
-        ],
-        resize_keyboard=True
-    )
     await message.answer(
         "Assalomu alaykum! Dars jadvalini Web App orqali ko‘rishingiz mumkin.\n\n"
-        "📢 Ochish uchun pastdagi tugmani bosing yoki /web buyrug‘ini yuboring:", 
-        reply_markup=keyboard
-    )
-
-@router.message(F.text == "🌐 Web app'ni ochish")
-async def open_web(message: types.Message):
-    await message.answer("/web")
+        "📢 Web app'ni ochish uchun /web buyrug‘ini yuboring:")
 # /web komandasiga javob
 @router.message(Command("web"))
 async def web1(message: types.Message):
