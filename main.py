@@ -27,7 +27,7 @@ dp.include_router(router)
 async def start(message: types.Message):
     keyboard = ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text="Web app'ni ochish")]
+            [KeyboardButton(text="🌐 Web app'ni ochish")]
         ],
         resize_keyboard=True
     )
@@ -37,7 +37,7 @@ async def start(message: types.Message):
         reply_markup=keyboard
     )
 
-@router.message(F.text == "Web app'ni ochish")
+@router.message(F.text == "🌐 Web app'ni ochish")
 async def open_web(message: types.Message):
     await message.answer("/web")
 # /web komandasiga javob
