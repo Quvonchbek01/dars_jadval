@@ -23,25 +23,15 @@ router = Router()
 dp = Dispatcher()
 dp.include_router(router)
 
-# ✅ CallbackData obyektini to‘g‘ri joydan import qildik
-class WebCallback(CallbackData, prefix="web"):
-    action: str
-
-# /start komandasiga javob
 @router.message(Command("start"))
 async def start(message: types.Message):
     keyboard = InlineKeyboardMarkup(inline_keyboard=[[
-        InlineKeyboardButton(text="🌍 Web", callback_data=WebCallback(action="open_web").pack())
+        InlineKeyboardButton(text="🌐 Dars jadvali", switch_inline_query_current_chat="/web")
     ]])
-    await message.answer("Assalomu alaykum. Dars jadvalini Web app orqali ko'rishingiz mumkin. Web appga kirish uchun pastdagi tugmani bosing yoki /web xabarini yuboring", reply_markup=keyboard)
-
-# Callbackni tutib olish
-@router.callback_query(WebCallback.filter())
-async def web_callback_handler(callback: types.CallbackQuery, callback_data: WebCallback):
-    if callback_data.action == "open_web":
-        await callback.message.answer("/web")  # Bot avtomatik `/web` komandasi yuboradi
-        await callback.answer()  # Tugmachani bosgandan keyin yuklash animatsiyasini yopish
-
+    await message.answer(
+        "Assalomu alaykum. Dars jadvalini Web app orqali ko'rishingiz mumkin.\n\n"
+        "📢 Web appga kirish uchun pastdagi tugmani bosing yoki /web xabarini yuboring:", 
+        reply_markup=keyboard)
 # /web komandasiga javob
 @router.message(Command("web"))
 async def web1(message: types.Message):
