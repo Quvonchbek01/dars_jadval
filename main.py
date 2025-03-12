@@ -27,7 +27,7 @@ dp.include_router(router)
 async def start(message: types.Message):
     await message.answer(
         "Assalomu alaykum! Dars jadvalini Web App orqali ko‘rishingiz mumkin.\n\n"
-        "✨ Web app'ni ochish uchun /web buyrug‘ini yuboring:")
+        "✨ Web app'ni ochish uchun /web buyrug‘ini yuboring!")
 # /web komandasiga javob
 @router.message(Command("web"))
 async def web1(message: types.Message):
