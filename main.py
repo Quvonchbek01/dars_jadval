@@ -1,21 +1,20 @@
+import os
 from aiogram import Bot, Dispatcher, types
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from aiogram.utils import executor
-import os
 from aiohttp import web
 from dotenv import load_dotenv
 
-# .env faylini o'qish
+# .env faylini yuklash
 load_dotenv()
 
-# Bot Token va Webhook URL ni .env faylidan o'qish
+# Bot Token va Webhook URL ni .env faylidan olish
 BOT_TOKEN = os.getenv('BOT_TOKEN')
 WEBHOOK_URL = os.getenv('WEBHOOK_URL')
 
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher(bot)
 
-# Start komandasiga javob
+# /start komandasiga javob
 @dp.message_handler(commands=['start'])
 async def start(message: types.Message):
     keyboard = InlineKeyboardMarkup().add(
@@ -26,7 +25,7 @@ async def start(message: types.Message):
     )
     await message.answer("📢 Web App'ni ochish uchun tugmani bosing:", reply_markup=keyboard)
 
-# Webhookni sozlash
+# Webhook orqali kelgan so‘rovlarni qabul qilish
 async def on_webhook(request):
     json_str = await request.json()
     update = types.Update(**json_str)
@@ -35,18 +34,21 @@ async def on_webhook(request):
 
 # Webhookni sozlash
 async def set_webhook():
-    webhook_url = WEBHOOK_URL
-    await bot.set_webhook(webhook_url)
+    await bot.set_webhook(WEBHOOK_URL)
 
-# Serverni ishga tushirish
-def start_server():
+# Webhook serverni ishga tushirish
+async def start_webhook():
+    await set_webhook()  # Webhookni sozlash
+
     app = web.Application()
     app.router.add_post('/webhook', on_webhook)
-    web.run_app(app, host='0.0.0.0', port=3001)
 
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, host="0.0.0.0", port=5000)
+    await site.start()
+
+# Webhook serverni ishga tushirish
 if __name__ == "__main__":
     import asyncio
-    loop = asyncio.get_event_loop()
-    loop.create_task(set_webhook())  # Webhookni sozlash
-    loop.run_in_executor(None, start_server)  # Serverni ishga tushirish
-    executor.start_polling(dp, skip_updates=True)
+    asyncio.run(start_webhook())
