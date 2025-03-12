@@ -1,8 +1,8 @@
 import os
 import asyncio
 from aiogram import Bot, Dispatcher, types, Router
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
-from aiogram.fsm.storage.memory import MemoryStorage
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo, Update
+from aiogram.filters import Command
 from aiohttp import web
 from dotenv import load_dotenv
 
@@ -15,12 +15,12 @@ WEBHOOK_URL = os.getenv('WEBHOOK_URL')
 
 # Bot va Dispatcher yaratish
 bot = Bot(token=BOT_TOKEN)
-dp = Dispatcher(storage=MemoryStorage())
 router = Router()
+dp = Dispatcher()
 dp.include_router(router)
 
 # /start komandasiga javob
-@router.message(types.Message, commands=["start"])
+@router.message(Command("start"))
 async def start(message: types.Message):
     keyboard = InlineKeyboardMarkup().add(
         InlineKeyboardButton(
@@ -33,8 +33,8 @@ async def start(message: types.Message):
 # Webhook orqali kelgan so‘rovlarni qabul qilish
 async def on_webhook(request):
     json_str = await request.json()
-    update = types.Update.model_validate(json_str)
-    await dp._process_update(update)
+    update = Update.model_validate(json_str)
+    await dp.feed_update(bot, update)
     return web.Response()
 
 # Webhookni sozlash
