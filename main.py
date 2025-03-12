@@ -2,8 +2,7 @@ import os
 import asyncio
 from aiogram import Bot, Dispatcher, types, Router
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo, Update
-from aiogram.filters import Command
-from aiogram.utils.callback_data import CallbackData
+from aiogram.filters import Command, CallbackData  # ✅ CallbackData ni to‘g‘ri joyidan import qildik
 from aiohttp import web
 from dotenv import load_dotenv
 
@@ -23,22 +22,24 @@ router = Router()
 dp = Dispatcher()
 dp.include_router(router)
 
-# CallbackData obyektini yaratamiz
-web_callback = CallbackData("web", "action")
+# ✅ CallbackData obyektini to‘g‘ri joydan import qildik
+class WebCallback(CallbackData, prefix="web"):
+    action: str
 
 # /start komandasiga javob
 @router.message(Command("start"))
 async def start(message: types.Message):
     keyboard = InlineKeyboardMarkup(inline_keyboard=[[
-        InlineKeyboardButton(text="🌍 Web App'ni ochish", callback_data=web_callback.new(action="open_web"))
+        InlineKeyboardButton(text="🌍 Web", callback_data=WebCallback(action="open_web").pack())
     ]])
-    await message.answer("Assalomu alaykum. Dars jadvalini Web app orqali ko'rishingiz mumkin.", reply_markup=keyboard)
+    await message.answer("Assalomu alaykum. Dars jadvalini Web app orqali ko'rishingiz mumkin. Web appga kirish uchun pastdagi tugmani bosing yoki /web xabarini yuboring", reply_markup=keyboard)
 
-# Callback ni tutib olish
-@router.callback_query(web_callback.filter(action="open_web"))
-async def web_callback_handler(callback: types.CallbackQuery):
-    await callback.message.answer("/web")  # Bot avtomatik `/web` komandasi yuboradi
-    await callback.answer()  # Tugmachani bosgandan keyin yuklash animatsiyasini yopish
+# Callbackni tutib olish
+@router.callback_query(WebCallback.filter())
+async def web_callback_handler(callback: types.CallbackQuery, callback_data: WebCallback):
+    if callback_data.action == "open_web":
+        await callback.message.answer("/web")  # Bot avtomatik `/web` komandasi yuboradi
+        await callback.answer()  # Tugmachani bosgandan keyin yuklash animatsiyasini yopish
 
 # /web komandasiga javob
 @router.message(Command("web"))
