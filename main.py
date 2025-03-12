@@ -12,6 +12,7 @@ load_dotenv()
 # Bot Token va Webhook URL ni olish
 BOT_TOKEN = os.getenv('BOT_TOKEN')
 WEBHOOK_URL = os.getenv('WEBHOOK_URL')
+PORT = int(os.getenv("PORT", 5000))  # Render $PORT ni avtomatik oladi
 
 # Bot va Dispatcher yaratish
 bot = Bot(token=BOT_TOKEN)
@@ -50,7 +51,7 @@ async def start_webhook():
 
     runner = web.AppRunner(app)
     await runner.setup()
-    site = web.TCPSite(runner, host="0.0.0.0", port=5000)
+    site = web.TCPSite(runner, host="0.0.0.0", port=PORT)  # $PORT ishlatilmoqda
     await site.start()
 
 # Webhook serverni ishga tushirish
