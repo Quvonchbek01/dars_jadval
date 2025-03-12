@@ -33,12 +33,16 @@ async def start(message: types.Message):
     ]])
     await message.answer("📢 Web App'ni ochish uchun tugmani bosing:", reply_markup=keyboard)
 
-# Webhook orqali kelgan so‘rovlarni qabul qilish
+# Webhook orqali kelgan so‘rovlarni qabul qilish (POST)
 async def on_webhook(request):
     json_str = await request.json()
     update = Update.model_validate(json_str)
     await dp.feed_update(bot, update)
-    return web.Response()
+    return web.Response(text="✅ Update qabul qilindi!", status=200)
+
+# GET so‘rovlarga javob berish (UptimeRobot uchun)
+async def on_ping(request):
+    return web.Response(text="✅ Bot ishlayapti!", status=200)
 
 # Webhookni sozlash
 async def set_webhook():
@@ -50,7 +54,8 @@ async def start_webhook():
     await set_webhook()  # Webhookni sozlash
 
     app = web.Application()
-    app.router.add_post('/webhook', on_webhook)
+    app.router.add_post('/webhook', on_webhook)  # Telegram uchun
+    app.router.add_get('/', on_ping)  # UptimeRobot uchun
 
     runner = web.AppRunner(app)
     await runner.setup()
