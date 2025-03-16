@@ -1,4 +1,4 @@
-from aiogram import Bot, Dispatcher, types
+from aiogram import Bot, Dispatcher, types, Router
 from aiogram.types import WebAppInfo, Message
 from aiogram.filters import Command
 from aiogram.fsm.storage.memory import MemoryStorage
@@ -21,10 +21,11 @@ TOKEN = os.getenv("BOT_TOKEN")
 WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 PORT = int(os.getenv("PORT", 10000))  # Default port: 10000
 
-# ✅ Bot va Dispatcher
+# ✅ Bot, Dispatcher va Router
 bot = Bot(token=TOKEN)
 storage = MemoryStorage()
 dp = Dispatcher(storage=storage)
+router = Router()
 
 # ✅ FSM uchun state
 class UserState(StatesGroup):
@@ -50,7 +51,7 @@ back_button = ReplyKeyboardMarkup(keyboard=[
 ], resize_keyboard=True)
 
 # ✅ /start handler
-@dp.message(Command("start"))
+@router.message(Command("start"))
 async def start_handler(message: Message):
     user_id = message.from_user.id
     user_name = message.from_user.full_name
@@ -58,20 +59,20 @@ async def start_handler(message: Message):
     await message.answer("👋 Assalomu alaykum! Dars jadval botiga xush kelibsiz!", reply_markup=start_menu)
 
 # ✅ 📊 Statistika
-@dp.message(lambda message: message.text == "📊 Statistika")
+@router.message(lambda message: message.text == "📊 Statistika")
 async def show_stats(message: Message):
     user_id = message.from_user.id
     stats = await get_user_stats(user_id)
     await message.answer(f"📅 Oxirgi faollik: {stats['last_active']}\n✅ Umumiy foydalanishlar soni: {stats['usage_count']}")
 
 # ✅ 💬 Fikr bildirish
-@dp.message(lambda message: message.text == "💬 Fikr bildirish")
+@router.message(lambda message: message.text == "💬 Fikr bildirish")
 async def start_feedback(message: Message, state: FSMContext):
     await state.set_state(UserState.feedback)
     await message.answer("✍️ Fikringizni yozing:", reply_markup=back_button)
 
 # ✅ 💬 Fikrni qabul qilish + Adminga yuborish
-@dp.message(UserState.feedback)
+@router.message(UserState.feedback)
 async def handle_feedback(message: Message, state: FSMContext):
     if message.text == "⬅️ Orqaga":
         await state.clear()
@@ -92,7 +93,7 @@ async def handle_feedback(message: Message, state: FSMContext):
     await state.clear()
 
 # ✅ 🛡 Admin panel
-@dp.message(Command("admin"))
+@router.message(Command("admin"))
 async def admin_panel_handler(message: Message):
     if message.from_user.id == 5883662749:  # Admin ID
         await message.answer("🛡 Admin panelga xush kelibsiz!", reply_markup=admin_panel)
@@ -100,20 +101,20 @@ async def admin_panel_handler(message: Message):
         await message.answer("❌ Sizda admin huquqlari yo'q.")
 
 # ✅ 📈 Foydalanuvchilar statistikasi
-@dp.message(lambda message: message.text == "📈 Foydalanuvchilar statistikasini ko'rish")
+@router.message(lambda message: message.text == "📈 Foydalanuvchilar statistikasini ko'rish")
 async def admin_stats(message: Message):
     total_users = await get_total_users()
     daily_users = await get_daily_users()
     await message.answer(f"👤 Jami foydalanuvchilar: {total_users}\n📈 Bugungi foydalanuvchilar: {daily_users}")
 
 # ✅ 📨 Mass xabar yuborish
-@dp.message(lambda message: message.text == "📨 Broadcast")
+@router.message(lambda message: message.text == "📨 Broadcast")
 async def broadcast_start(message: Message, state: FSMContext):
     await state.set_state(UserState.broadcast)
     await message.answer("✍️ Yuboriladigan xabar matnini kiriting:", reply_markup=back_button)
 
 # ✅ 📩 Mass xabar yuborish logikasi
-@dp.message(UserState.broadcast)
+@router.message(UserState.broadcast)
 async def broadcast_message(message: Message, state: FSMContext):
     if message.text == "⬅️ Orqaga":
         await state.clear()
@@ -139,9 +140,7 @@ async def handle_get_request(request):
 async def on_startup():
     await create_db()  # Baza faqat bir marta yaratiladi
     await bot.set_webhook(f"{WEBHOOK_URL}/webhook")
-    
-    # 🎯 Muammo yechimi: Dispatcher routerini ro'yxatdan o'tkazish
-    dp.include_router(dp.router)
+    dp.include_router(router)  # 🔥 Routerni ro'yxatdan o'tkazamiz
 
 # ✅ Aiohttp server
 app = web.Application()
