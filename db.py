@@ -87,3 +87,8 @@ async def get_all_users():
     async with conn.acquire() as connection:
         rows = await connection.fetch("SELECT user_id FROM users;")
         return [row['user_id'] for row in rows]
+# ✅ Userning statistikasi va Top 5 foydalanuvchini olish
+async def get_top_users():
+    from database import conn, cur
+    cur.execute("SELECT full_name, usage_count FROM users ORDER BY usage_count DESC LIMIT 5")
+    return cur.fetchall()
