@@ -61,8 +61,24 @@ async def start_handler(message: Message):
 @dp.message(lambda message: message.text == "📊 Statistika")
 async def show_stats(message: Message):
     user_id = message.from_user.id
-    stats = await get_user_stats(user_id)
-    await message.answer(f"📅 Oxirgi faollik: {stats['last_active']}\n✅ Umumiy foydalanishlar soni: {stats['usage_count']}")
+    user_usage = await get_user_stats(user_id)
+    total_users = await get_total_users()
+    top_users = await get_top_users()
+
+    top_users_text = ""
+    for i, user in enumerate(top_users, start=1):
+        top_users_text += f"{i}. {user['full_name']} — {user['usage_count']} marta\n"
+
+    await message.answer(f"""
+📈 **Statistika**:
+
+👤 Sizning foydalanish soningiz: {user_usage} marta
+👥 Jami foydalanuvchilar: {total_users}
+
+🔥 **Top 5 eng faol foydalanuvchilar:**
+{top_users_text}
+    """, parse_mode="Markdown")
+
 
 # ✅ 💬 Fikr bildirish
 @dp.message(lambda message: message.text == "💬 Fikr bildirish")
