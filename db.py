@@ -1,78 +1,111 @@
 import asyncpg
 import os
+from datetime import datetime
 from dotenv import load_dotenv
 
+# ✅ .env fayldan ma'lumotlarni olish
 load_dotenv()
+DATABASE_URL = os.getenv("DATABASE_URL")  # PostgreSQL URI (render yoki boshqa serverda)
 
-DATABASE_URL = os.getenv("DATABASE_URL")
-
-
-# ✅ Database avto-create
+# ✅ Ma'lumotlar bazasini yaratish funksiyasi
 async def create_db():
     conn = await asyncpg.connect(DATABASE_URL)
+
+    # ✅ Foydalanuvchilar jadvali
     await conn.execute("""
     CREATE TABLE IF NOT EXISTS users (
         user_id BIGINT PRIMARY KEY,
-        full_name TEXT,
-        usage_count INTEGER DEFAULT 1
-    );
+        full_name VARCHAR(100),
+        join_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        last_active TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        usage_count INTEGER DEFAULT 0
+    )
+    """)
 
+    # ✅ Fikrlar jadvali
+    await conn.execute("""
     CREATE TABLE IF NOT EXISTS feedback (
         id SERIAL PRIMARY KEY,
-        user_id BIGINT REFERENCES users(user_id),
-        message TEXT,
+        user_id BIGINT,
+        feedback_text TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    );
+    )
     """)
-    await conn.close()
 
-
-# ✅ Foydalanuvchini ro'yxatdan o'tkazish yoki usage_countni oshirish
-async def register_user(user_id, full_name):
-    conn = await asyncpg.connect(DATABASE_URL)
+    # ✅ Foydalanuvchilar statistikasini qayd qiladigan jadval
     await conn.execute("""
-    INSERT INTO users (user_id, full_name) 
+    CREATE TABLE IF NOT EXISTS daily_stats (
+        date DATE PRIMARY KEY,
+        user_count INTEGER DEFAULT 0
+    )
+    """)
+
+    await conn.close()
+
+# ✅ Foydalanuvchini ro'yxatdan o'tkazish
+async def register_user(user_id: int, full_name: str):
+    conn = await asyncpg.connect(DATABASE_URL)
+
+    await conn.execute("""
+    INSERT INTO users (user_id, full_name)
     VALUES ($1, $2)
-    ON CONFLICT (user_id) DO UPDATE 
-    SET usage_count = users.usage_count + 1;
+    ON CONFLICT (user_id) DO NOTHING
     """, user_id, full_name)
+
     await conn.close()
 
-
-# ✅ Foydalanuvchining foydalanish statistikasini olish
-async def get_user_stats(user_id):
+# ✅ Foydalanuvchi statistikasi
+async def get_user_stats(user_id: int):
     conn = await asyncpg.connect(DATABASE_URL)
-    result = await conn.fetchrow("SELECT usage_count FROM users WHERE user_id = $1", user_id)
+
+    user_stats = await conn.fetchrow("""
+    SELECT last_active, usage_count 
+    FROM users 
+    WHERE user_id = $1
+    """, user_id)
+
     await conn.close()
-    return result
+    return user_stats
 
-
-# ✅ Feedback saqlash
-async def save_feedback(user_id, message):
+# ✅ Fikrni saqlash
+async def save_feedback(user_id: int, feedback_text: str):
     conn = await asyncpg.connect(DATABASE_URL)
-    await conn.execute("INSERT INTO feedback (user_id, message) VALUES ($1, $2)", user_id, message)
+
+    await conn.execute("""
+    INSERT INTO feedback (user_id, feedback_text)
+    VALUES ($1, $2)
+    """, user_id, feedback_text)
+
     await conn.close()
 
-
-# ✅ Jami foydalanuvchilar soni
+# ✅ Jami foydalanuvchilar sonini olish
 async def get_total_users():
     conn = await asyncpg.connect(DATABASE_URL)
-    result = await conn.fetchval("SELECT COUNT(*) FROM users")
+
+    total_users = await conn.fetchval("SELECT COUNT(*) FROM users")
+
     await conn.close()
-    return result
+    return total_users
 
-
-# ✅ Eng faol foydalanuvchilar
-async def get_top_users():
+# ✅ Bugungi faollikni hisoblash
+async def get_daily_users():
     conn = await asyncpg.connect(DATABASE_URL)
-    result = await conn.fetch("SELECT full_name, usage_count FROM users ORDER BY usage_count DESC LIMIT 5")
+
+    today = datetime.now().date()
+    daily_users = await conn.fetchval("""
+    SELECT user_count 
+    FROM daily_stats 
+    WHERE date = $1
+    """, today) or 0
+
     await conn.close()
-    return result
+    return daily_users
 
-
-# ✅ Barcha userlarni olish
+# ✅ Barcha foydalanuvchilarning ID'larini olish (Broadcast uchun)
 async def get_all_users():
     conn = await asyncpg.connect(DATABASE_URL)
-    result = await conn.fetch("SELECT user_id FROM users")
+
+    users = await conn.fetch("SELECT user_id FROM users")
+
     await conn.close()
-    return [row['user_id'] for row in result]
+    return [user['user_id'] for user in users]
