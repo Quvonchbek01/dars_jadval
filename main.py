@@ -112,24 +112,26 @@ async def broadcast_message(message: Message, state: FSMContext):
     await message.answer(f"✅ {sent_count} ta foydalanuvchiga yuborildi.", reply_markup=admin_panel)
     await state.clear()
 
-# ✅ Server ishlayotganini tekshirish uchun / endpoint
-async def health_check(request):
-    return web.Response(text="✅ Bot is running!")
+# ✅ Uptimerobot uchun GET so'rovni qabul qiladigan route
+async def handle_get_request(request):
+    return web.Response(text="✅ Bot ishlayapti!")
 
+# ✅ Webhook o'rnatish
 async def on_startup():
-    await bot.set_webhook(f"{WEBHOOK_URL}/webhook")  # ✅ Webhook to'g'irlandi
-    await create_db()
+    await create_db()  # Baza faqat bir marta yaratiladi
+    await bot.set_webhook(f"{WEBHOOK_URL}/webhook")
 
-async def health_check(request):
-    return web.Response(text="Bot ishlayapti! ✅")  # ✅ GET so‘rovi qo‘shildi
-
+# ✅ Aiohttp server
 app = web.Application()
 SimpleRequestHandler(dispatcher=dp, bot=bot).register(app, path="/webhook")
-app.router.add_get("/", health_check)  # ✅ GET so‘rov ham ishlaydi
-setup_application(app, dp)
+app.router.add_get("/", handle_get_request)  # GET so'rov uchun
 
+# ✅ Asosiy async loop
+async def main():
+    await on_startup()
+    await web._run_app(app, host="0.0.0.0", port=PORT)
+
+# ✅ Botni ishga tushirish
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(on_startup())
-    web.run_app(app, host="0.0.0.0", port=PORT)
+    asyncio.run(main())
