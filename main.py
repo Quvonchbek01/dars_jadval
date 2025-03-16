@@ -1,130 +1,145 @@
-import os
-import asyncio
 from aiogram import Bot, Dispatcher, types
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo, Update, ReplyKeyboardMarkup, KeyboardButton
-from aiogram.filters import Command, StateFilter
+from aiogram.types import WebAppInfo, Message
+from aiogram.filters import Command
+from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
+from db import register_user, get_user_stats, save_feedback
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
 from aiohttp import web
-from dotenv import load_dotenv
-from db import save_user, get_total_users, get_daily_users
-from admin import router as admin_router
+import logging
+import asyncio
 
-load_dotenv()
+# Bot tokeni
+TOKEN = "YOUR_BOT_API_TOKEN"
+WEBHOOK_URL = "https://your-server.com/webhook"
 
-BOT_TOKEN = os.getenv('BOT_TOKEN')
-WEBHOOK_URL = os.getenv('WEBHOOK_URL')
-ADMIN_ID = int(os.getenv('ADMIN_ID'))
-PORT = int(os.getenv("PORT", 10000))
+# Bot va dispatcher
+bot = Bot(token=TOKEN)
+storage = MemoryStorage()
+dp = Dispatcher(storage=storage)
 
-bot = Bot(token=BOT_TOKEN)
-dp = Dispatcher()
+# FSM uchun state
+class UserState(StatesGroup):
+    feedback = State()
 
-dp.include_router(admin_router)
 
-# Reply Keyboard
-main_keyboard = ReplyKeyboardMarkup(keyboard=[
-    [KeyboardButton(text="📅 Dars jadvali"), KeyboardButton(text="📊 Statistika")],
-    [KeyboardButton(text="📩 Adminga murojaat")]
+# 🎛️ Start menu
+start_menu = ReplyKeyboardMarkup(keyboard=[
+    [KeyboardButton(text="📚 Dars jadvali", web_app=WebAppInfo(url="https://your-website.com"))],
+    [KeyboardButton(text="📊 Statistika"), KeyboardButton(text="💬 Fikr bildirish")]
 ], resize_keyboard=True)
 
-# Orqaga qaytish keyboard
-back_keyboard = ReplyKeyboardMarkup(keyboard=[
-    [KeyboardButton(text="⬅️ Orqaga qaytish")]
+# 🎛️ Admin panel
+admin_panel = ReplyKeyboardMarkup(keyboard=[
+    [KeyboardButton(text="📈 Foydalanuvchilar statistikasini ko'rish")],
+    [KeyboardButton(text="📨 Mass xabar yuborish")],
+    [KeyboardButton(text="⬅️ Orqaga")]
 ], resize_keyboard=True)
 
-# State
-class ContactAdmin(StatesGroup):
-    waiting_for_message = State()
+
+# 🎛️ Orqaga tugma
+back_button = ReplyKeyboardMarkup(keyboard=[
+    [KeyboardButton(text="⬅️ Orqaga")]
+], resize_keyboard=True)
 
 
+# 🎯 START handler
 @dp.message(Command("start"))
-async def start_handler(message: types.Message):
-    await save_user(message.from_user.id)
-    await message.answer(
-        "Assalomu alaykum!\n\n"
-        "📅 Dars jadvalini ko‘rish uchun 'Dars jadvali' tugmasini bosing.",
-        reply_markup=main_keyboard
-    )
+async def start_handler(message: Message):
+    user_id = message.from_user.id
+    user_name = message.from_user.full_name
+    await register_user(user_id, user_name)
+    await message.answer("👋 Assalomu alaykum! Dars jadval botiga xush kelibsiz!", reply_markup=start_menu)
 
 
-@dp.message(lambda message: message.text == "📅 Dars jadvali")
-async def web_app(message: types.Message):
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[[
-        InlineKeyboardButton(
-            text="🗓️ Web App'ni ochish",
-            web_app=WebAppInfo(url="https://imjadval.netlify.app")
-        )
-    ]])
-    await message.answer("📢 Dars jadvalini ko'rish uchun tugmani bosing:", reply_markup=keyboard)
-
-
+# 📊 Statistika
 @dp.message(lambda message: message.text == "📊 Statistika")
-async def show_stats(message: types.Message):
+async def show_stats(message: Message):
+    user_id = message.from_user.id
+    stats = await get_user_stats(user_id)
+    await message.answer(f"📅 Oxirgi faolligingiz: {stats['last_active']}\n✅ Umumiy foydalanishlar soni: {stats['usage_count']}")
+
+
+# 💬 Fikr bildirish
+@dp.message(lambda message: message.text == "💬 Fikr bildirish")
+async def start_feedback(message: Message, state: FSMContext):
+    await state.set_state(UserState.feedback)
+    await message.answer("✍️ Fikringizni yozing:", reply_markup=back_button)
+
+
+# 💬 Fikrlarni qabul qilish
+@dp.message(UserState.feedback)
+async def handle_feedback(message: Message, state: FSMContext):
+    user_id = message.from_user.id
+    feedback_text = message.text
+    await save_feedback(user_id, feedback_text)
+    await message.answer("✅ Fikringiz adminga yuborildi.", reply_markup=start_menu)
+    await state.clear()
+
+
+# 🛡 Admin panel
+@dp.message(Command("admin"))
+async def admin_panel_handler(message: Message):
+    if message.from_user.id == 123456789:  # Admin ID
+        await message.answer("🛡 Admin panelga xush kelibsiz!", reply_markup=admin_panel)
+    else:
+        await message.answer("❌ Sizda admin huquqlari yo'q.")
+
+
+# 📈 Foydalanuvchilar statistikasi
+@dp.message(lambda message: message.text == "📈 Foydalanuvchilar statistikasini ko'rish")
+async def admin_stats(message: Message):
+    from db import get_total_users, get_daily_users
     total_users = await get_total_users()
     daily_users = await get_daily_users()
-    await message.answer(f"👤 Jami foydalanuvchilar: {total_users}\n📈 Bugungi foydalanuvchilar: {daily_users}", reply_markup=back_keyboard)
+    await message.answer(f"👤 Jami foydalanuvchilar: {total_users}\n📈 Bugungi foydalanuvchilar: {daily_users}")
 
 
-@dp.message(lambda message: message.text == "📩 Adminga murojaat")
-async def contact_admin(message: types.Message, state: FSMContext):
-    await message.answer("✍️ Adminga yuboradigan xabaringizni yozing:", reply_markup=back_keyboard)
-    await state.set_state(ContactAdmin.waiting_for_message)
+# 📨 Mass xabar yuborish
+@dp.message(lambda message: message.text == "📨 Mass xabar yuborish")
+async def broadcast_start(message: Message, state: FSMContext):
+    await state.set_state(UserState.feedback)
+    await message.answer("✍️ Yuboriladigan xabar matnini kiriting:", reply_markup=back_button)
 
 
-@dp.message(StateFilter(ContactAdmin.waiting_for_message), lambda message: message.text == "⬅️ Orqaga qaytish")
-async def cancel_contact(message: types.Message, state: FSMContext):
+# 📩 Mass xabar yuborish logikasi
+@dp.message(UserState.feedback)
+async def broadcast_message(message: Message, bot: Bot, state: FSMContext):
+    from db import get_all_users
+    users = await get_all_users()
+    sent_count = 0
+
+    for user_id in users:
+        try:
+            await bot.send_message(user_id, message.text)
+            sent_count += 1
+        except:
+            continue
+
+    await message.answer(f"✅ {sent_count} ta foydalanuvchiga yuborildi.", reply_markup=admin_panel)
     await state.clear()
-    await message.answer("❌ Adminga murojaat bekor qilindi.", reply_markup=main_keyboard)
 
 
-@dp.message(lambda message: message.text == "⬅️ Orqaga qaytish")
-async def back_to_main(message: types.Message):
-    await message.answer("🔙 Asosiy menyuga qaytdingiz.", reply_markup=main_keyboard)
+# 🛡 Orqaga qaytish
+@dp.message(lambda message: message.text == "⬅️ Orqaga")
+async def back_to_main(message: Message, state: FSMContext):
+    await state.clear()
+    await message.answer("🔙 Asosiy menyuga qaytdingiz.", reply_markup=start_menu)
 
 
-@dp.message(StateFilter(ContactAdmin.waiting_for_message))
-async def forward_to_admin(message: types.Message, state: FSMContext):
-    if message.text:
-        await bot.send_message(ADMIN_ID, f"👤 @{message.from_user.username}\n\n{message.text}")
-        await message.answer("✅ Xabaringiz adminga yetkazildi.", reply_markup=main_keyboard)
-        await state.clear()
-
-
-async def on_webhook(request):
-    json_str = await request.json()
-    update = Update.model_validate(json_str)
-    await dp.feed_update(bot, update)
-    return web.Response(text="✅ Update qabul qilindi!", status=200)
-
-
-async def on_ping(request):
-    return web.Response(text="✅ Bot ishlayapti!", status=200)
-
-
-async def set_webhook():
+# Webhook o'rnatish
+async def on_startup():
     await bot.set_webhook(WEBHOOK_URL)
-    print(f"✅ Webhook o‘rnatildi: {WEBHOOK_URL}")
 
 
-async def start_webhook():
-    await set_webhook()
-    app = web.Application()
-    app.router.add_post('/webhook', on_webhook)
-    app.router.add_get('/', on_ping)
-    
-    runner = web.AppRunner(app)
-    await runner.setup()
-    site = web.TCPSite(runner, host="0.0.0.0", port=PORT)
-    await site.start()
-    
-    print(f"🚀 Server {PORT} portda ishlayapti...")
-    
-    try:
-        await asyncio.Event().wait()
-    finally:
-        await bot.session.close()
-        print("🔴 Bot sessiyasi yopildi!")
+# Aiohttp server
+app = web.Application()
+SimpleRequestHandler(dispatcher=dp, bot=bot).register(app, path="/webhook")
+setup_application(app, dp)
 
 if __name__ == "__main__":
-    asyncio.run(start_webhook())
+    logging.basicConfig(level=logging.INFO)
+    asyncio.run(on_startup())
+    web.run_app(app, host="0.0.0.0", port=8080)
