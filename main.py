@@ -116,18 +116,18 @@ async def broadcast_message(message: Message, state: FSMContext):
 async def health_check(request):
     return web.Response(text="✅ Bot is running!")
 
-# ✅ Webhook o'rnatish
 async def on_startup():
-    await create_db()  # Baza faqat bir marta yaratiladi
-    await bot.set_webhook(WEBHOOK_URL)
+    await bot.set_webhook(f"{WEBHOOK_URL}/webhook")  # ✅ Webhook to'g'irlandi
+    await create_db()
 
-# ✅ Aiohttp server
+async def health_check(request):
+    return web.Response(text="Bot ishlayapti! ✅")  # ✅ GET so‘rovi qo‘shildi
+
 app = web.Application()
-app.router.add_get("/", health_check)  # 🎯 GET sorovi uchun endpoint qo'shdik
 SimpleRequestHandler(dispatcher=dp, bot=bot).register(app, path="/webhook")
+app.router.add_get("/", health_check)  # ✅ GET so‘rov ham ishlaydi
 setup_application(app, dp)
 
-# ✅ Render server uchun to‘g‘ri loop
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     loop = asyncio.get_event_loop()
