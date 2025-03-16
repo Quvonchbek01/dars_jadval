@@ -31,7 +31,7 @@ class UserState(StatesGroup):
     feedback = State()
     broadcast = State()
 
-# ✅ Start menyu
+# ✅ Asosiy menyu
 start_menu = ReplyKeyboardMarkup(keyboard=[
     [KeyboardButton(text="📚 Dars jadvali", web_app=WebAppInfo(url="https://imjadval.netlify.app"))],
     [KeyboardButton(text="📊 Statistika"), KeyboardButton(text="💬 Fikr bildirish")]
@@ -70,7 +70,7 @@ async def start_feedback(message: Message, state: FSMContext):
     await state.set_state(UserState.feedback)
     await message.answer("✍️ Fikringizni yozing:", reply_markup=back_button)
 
-# ✅ 💬 Fikrni qabul qilish + Adminga yuborish
+# ✅ 💬 Fikrni qabul qilish
 @dp.message(UserState.feedback)
 async def handle_feedback(message: Message, state: FSMContext):
     if message.text == "⬅️ Orqaga":
@@ -81,12 +81,12 @@ async def handle_feedback(message: Message, state: FSMContext):
     user_id = message.from_user.id
     feedback_text = message.text
     
-    # ✅ Fikrni bazaga saqlash
+    # ✅ Fikrni saqlash
     await save_feedback(user_id, feedback_text)
     
     # ✅ Admin ID'ga yuborish
     admin_id = 5883662749  # Admin ID
-    await bot.send_message(admin_id, f"💬 Yangi fikr: \n\n{feedback_text}\n\n👤 Fikr egasi: [{message.from_user.full_name}](tg://user?id={user_id})", parse_mode="Markdown")
+    await bot.send_message(admin_id, f"💬 Yangi fikr: \n\n{feedback_text}\n\n👤 [{message.from_user.full_name}](tg://user?id={user_id})", parse_mode="Markdown")
     
     await message.answer("✅ Fikringiz adminga yuborildi.", reply_markup=start_menu)
     await state.clear()
@@ -135,9 +135,8 @@ async def broadcast_message(message: Message, state: FSMContext):
 @dp.message(lambda message: message.text == "⬅️ Orqaga")
 async def go_back(message: Message, state: FSMContext):
     await state.clear()
-    user_id = message.from_user.id
-    if user_id == 5883662749:  # Admin ID
-        await message.answer("🔙 Admin panelga qaytdingiz.", reply_markup=admin_panel)
+    if message.from_user.id == 5883662749:  # Admin bo'lsa
+        await message.answer("🔙 Asosiy menyuga qaytdingiz.", reply_markup=start_menu)
     else:
         await message.answer("🔙 Asosiy menyuga qaytdingiz.", reply_markup=start_menu)
 
@@ -147,14 +146,14 @@ async def handle_get_request(request):
 
 # ✅ Webhook o'rnatish
 async def on_startup():
-    await create_db()  # Baza faqat bir marta yaratiladi
+    await create_db()
     await bot.set_webhook(f"{WEBHOOK_URL}/webhook")
 
 # ✅ Aiohttp server
 app = web.Application()
 SimpleRequestHandler(dispatcher=dp, bot=bot).register(app, path="/webhook")
 setup_application(app, dp)
-app.router.add_get("/", handle_get_request)  # GET so'rov uchun
+app.router.add_get("/", handle_get_request)  
 
 # ✅ Asosiy async loop
 async def main():
