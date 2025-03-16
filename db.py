@@ -2,93 +2,96 @@ import asyncpg
 import os
 from dotenv import load_dotenv
 
-# .env fayldan ma'lumotlarni olish
+# ✅ .env faylni yuklash
 load_dotenv()
+
 DATABASE_URL = os.getenv("DATABASE_URL")
 
-# Postgresga ulanish
-async def connect_db():
-    return await asyncpg.create_pool(DATABASE_URL)
 
-# Baza yaratish (faqat bir marta)
+# ✅ Databasega ulanish
+async def connect_db():
+    return await asyncpg.connect(DATABASE_URL)
+
+
+# ✅ Databaseni avtomatik yaratish
 async def create_db():
     conn = await connect_db()
-    async with conn.acquire() as connection:
-        # Users jadvali
-        await connection.execute("""
-        CREATE TABLE IF NOT EXISTS users (
-            user_id BIGINT PRIMARY KEY,
-            user_name TEXT,
-            last_active TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            usage_count INTEGER DEFAULT 0
-        );
-        """)
-        
-        # Feedback jadvali
-        await connection.execute("""
-        CREATE TABLE IF NOT EXISTS feedback (
-            user_id BIGINT,
-            feedback_text TEXT,
-            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
-        """)
+    await conn.execute('''
+    CREATE TABLE IF NOT EXISTS users (
+        user_id BIGINT PRIMARY KEY,
+        full_name VARCHAR(255),
+        usage_count INTEGER DEFAULT 0,
+        last_active TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
 
-# Foydalanuvchini ro'yxatga olish
-async def register_user(user_id, user_name):
+    CREATE TABLE IF NOT EXISTS feedback (
+        id SERIAL PRIMARY KEY,
+        user_id BIGINT,
+        feedback_text TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    
+    -- Eng faol foydalanuvchini olish uchun trigger
+    CREATE OR REPLACE FUNCTION update_usage() RETURNS TRIGGER AS $$
+    BEGIN
+        UPDATE users SET usage_count = usage_count + 1, last_active = CURRENT_TIMESTAMP WHERE user_id = NEW.user_id;
+        RETURN NEW;
+    END;
+    $$ LANGUAGE plpgsql;
+
+    DROP TRIGGER IF EXISTS usage_trigger ON users;
+    CREATE TRIGGER usage_trigger
+    AFTER INSERT ON users
+    FOR EACH ROW
+    EXECUTE FUNCTION update_usage();
+    ''')
+    await conn.close()
+
+
+# ✅ Foydalanuvchini ro'yxatdan o'tkazish
+async def register_user(user_id, full_name):
     conn = await connect_db()
-    async with conn.acquire() as connection:
-        await connection.execute("""
-        INSERT INTO users (user_id, user_name) 
-        VALUES ($1, $2) 
-        ON CONFLICT (user_id) DO NOTHING;
-        """, user_id, user_name)
+    await conn.execute('''
+    INSERT INTO users (user_id, full_name)
+    VALUES ($1, $2)
+    ON CONFLICT (user_id) DO NOTHING
+    ''', user_id, full_name)
+    await conn.close()
 
-# Foydalanuvchi statistikasini olish
-async def get_user_stats(user_id):
+
+# ✅ Foydalanuvchi statistikasini olish
+async def get_user_stats():
     conn = await connect_db()
-    async with conn.acquire() as connection:
-        result = await connection.fetchrow("""
-        SELECT last_active, usage_count 
-        FROM users 
-        WHERE user_id = $1;
-        """, user_id)
-        return result
 
-# Fikrni saqlash
-async def save_feedback(user_id, feedback_text):
+    total_users = await conn.fetchval('SELECT COUNT(*) FROM users')
+
+    top_users = await conn.fetch('''
+    SELECT full_name, usage_count 
+    FROM users 
+    ORDER BY usage_count DESC
+    LIMIT 5
+    ''')
+
+    await conn.close()
+
+    return {
+        'total_users': total_users,
+        'top_users': top_users
+    }
+
+
+# ✅ Foydalanuvchi aktivligini yangilash
+async def update_usage(user_id):
     conn = await connect_db()
-    async with conn.acquire() as connection:
-        await connection.execute("""
-        INSERT INTO feedback (user_id, feedback_text) 
-        VALUES ($1, $2);
-        """, user_id, feedback_text)
+    await conn.execute('''
+    UPDATE users SET usage_count = usage_count + 1, last_active = CURRENT_TIMESTAMP WHERE user_id = $1
+    ''', user_id)
+    await conn.close()
 
-# Admin uchun foydalanuvchilar soni
-async def get_total_users():
-    conn = await connect_db()
-    async with conn.acquire() as connection:
-        result = await connection.fetchval("SELECT COUNT(*) FROM users;")
-        return result
 
-# Bugungi foydalanuvchilar soni
-async def get_daily_users():
-    conn = await connect_db()
-    async with conn.acquire() as connection:
-        result = await connection.fetchval("""
-        SELECT COUNT(*) 
-        FROM users 
-        WHERE last_active >= CURRENT_DATE;
-        """)
-        return result
-
-# Barcha foydalanuvchilar ID sini olish (mass sending uchun)
+# ✅ Barcha userlarni olish (Broadcast uchun)
 async def get_all_users():
     conn = await connect_db()
-    async with conn.acquire() as connection:
-        rows = await connection.fetch("SELECT user_id FROM users;")
-        return [row['user_id'] for row in rows]
-# ✅ Userning statistikasi va Top 5 foydalanuvchini olish
-async def get_top_users():
-    from database import conn, cur
-    cur.execute("SELECT full_name, usage_count FROM users ORDER BY usage_count DESC LIMIT 5")
-    return cur.fetchall()
+    result = await conn.fetch('SELECT user_id FROM users')
+    await conn.close()
+    return [row['user_id'] for row in result]
