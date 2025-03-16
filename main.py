@@ -28,6 +28,7 @@ dp = Dispatcher(storage=storage)
 # FSM uchun state
 class UserState(StatesGroup):
     feedback = State()
+    broadcast = State()
 
 # 🎛️ Start menyu
 start_menu = ReplyKeyboardMarkup(keyboard=[
@@ -47,7 +48,7 @@ back_button = ReplyKeyboardMarkup(keyboard=[
     [KeyboardButton(text="⬅️ Orqaga")]
 ], resize_keyboard=True)
 
-# 🎯 /start handler
+# ✅ /start handler
 @dp.message(Command("start"))
 async def start_handler(message: Message):
     user_id = message.from_user.id
@@ -68,12 +69,24 @@ async def start_feedback(message: Message, state: FSMContext):
     await state.set_state(UserState.feedback)
     await message.answer("✍️ Fikringizni yozing:", reply_markup=back_button)
 
-# 💬 Fikrlarni qabul qilish
+# 💬 Fikrlarni qabul qilish + adminga yuborish
 @dp.message(UserState.feedback)
 async def handle_feedback(message: Message, state: FSMContext):
+    if message.text == "⬅️ Orqaga":
+        await state.clear()
+        await message.answer("🔙 Asosiy menyuga qaytdingiz.", reply_markup=start_menu)
+        return
+    
     user_id = message.from_user.id
     feedback_text = message.text
+    
+    # Fikrni bazaga saqlash
     await save_feedback(user_id, feedback_text)
+    
+    # Fikrni admin ID'siga yuborish
+    admin_id = 5883662749  # Admin ID
+    await bot.send_message(admin_id, f"💬 Yangi fikr: \n\n{feedback_text}\n\n👤 Fikr egasi: [{message.from_user.full_name}](tg://user?id={user_id})", parse_mode="Markdown")
+    
     await message.answer("✅ Fikringiz adminga yuborildi.", reply_markup=start_menu)
     await state.clear()
 
@@ -95,12 +108,17 @@ async def admin_stats(message: Message):
 # 📨 Mass xabar yuborish
 @dp.message(lambda message: message.text == "📨 Mass xabar yuborish")
 async def broadcast_start(message: Message, state: FSMContext):
-    await state.set_state(UserState.feedback)
+    await state.set_state(UserState.broadcast)
     await message.answer("✍️ Yuboriladigan xabar matnini kiriting:", reply_markup=back_button)
 
 # 📩 Mass xabar yuborish logikasi
-@dp.message(UserState.feedback)
+@dp.message(UserState.broadcast)
 async def broadcast_message(message: Message, state: FSMContext):
+    if message.text == "⬅️ Orqaga":
+        await state.clear()
+        await message.answer("🔙 Admin panelga qaytdingiz.", reply_markup=admin_panel)
+        return
+
     users = await get_all_users()
     sent_count = 0
     for user_id in users:
