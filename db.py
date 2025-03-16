@@ -39,7 +39,7 @@ async def register_user(user_id, full_name):
     await conn.close()
 
 
-# ✅ Userning foydalanish statistikasini olish
+# ✅ Foydalanuvchining foydalanish statistikasini olish
 async def get_user_stats(user_id):
     conn = await asyncpg.connect(DATABASE_URL)
     result = await conn.fetchrow("SELECT usage_count FROM users WHERE user_id = $1", user_id)
@@ -62,7 +62,7 @@ async def get_total_users():
     return result
 
 
-# ✅ Top 5 eng faol userlar
+# ✅ Eng faol foydalanuvchilar
 async def get_top_users():
     conn = await asyncpg.connect(DATABASE_URL)
     result = await conn.fetch("SELECT full_name, usage_count FROM users ORDER BY usage_count DESC LIMIT 5")
@@ -70,7 +70,7 @@ async def get_top_users():
     return result
 
 
-# ✅ Barcha foydalanuvchilarni olish
+# ✅ Barcha userlarni olish
 async def get_all_users():
     conn = await asyncpg.connect(DATABASE_URL)
     result = await conn.fetch("SELECT user_id FROM users")
