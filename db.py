@@ -7,7 +7,7 @@ load_dotenv()
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 
-# ✅ Database avto yaratish
+# ✅ Database avto-create
 async def create_db():
     conn = await asyncpg.connect(DATABASE_URL)
     await conn.execute("""
@@ -15,7 +15,7 @@ async def create_db():
         user_id BIGINT PRIMARY KEY,
         full_name TEXT,
         usage_count INTEGER DEFAULT 1,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        last_used TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
 
     CREATE TABLE IF NOT EXISTS feedback (
@@ -28,24 +28,25 @@ async def create_db():
     await conn.close()
 
 
-# ✅ Foydalanuvchini ro‘yxatdan o‘tkazish yoki usage_count ni oshirish
+# ✅ Foydalanuvchini ro'yxatdan o'tkazish yoki usage_countni oshirish
 async def register_user(user_id, full_name):
     conn = await asyncpg.connect(DATABASE_URL)
     await conn.execute("""
     INSERT INTO users (user_id, full_name) 
     VALUES ($1, $2)
     ON CONFLICT (user_id) DO UPDATE 
-    SET usage_count = users.usage_count + 1;
+    SET usage_count = users.usage_count + 1, 
+        last_used = CURRENT_TIMESTAMP;
     """, user_id, full_name)
     await conn.close()
 
 
-# ✅ Foydalanuvchining usage count ni olish
+# ✅ Foydalanuvchining usage count va oxirgi faollikni olish
 async def get_user_usage(user_id):
     conn = await asyncpg.connect(DATABASE_URL)
-    result = await conn.fetchval("SELECT usage_count FROM users WHERE user_id = $1", user_id)
+    result = await conn.fetchrow("SELECT usage_count FROM users WHERE user_id = $1", user_id)
     await conn.close()
-    return result or 0
+    return result
 
 
 # ✅ Fikrni saqlash
@@ -55,7 +56,7 @@ async def save_feedback(user_id, message):
     await conn.close()
 
 
-# ✅ Jami foydalanuvchilar soni
+# ✅ Barcha foydalanuvchilar soni
 async def get_total_users():
     conn = await asyncpg.connect(DATABASE_URL)
     result = await conn.fetchval("SELECT COUNT(*) FROM users")
@@ -71,7 +72,7 @@ async def get_top_users():
     return result
 
 
-# ✅ Barcha foydalanuvchilarni olish (Broadcast uchun)
+# ✅ Broadcast uchun barcha userlar ID'si
 async def get_all_users():
     conn = await asyncpg.connect(DATABASE_URL)
     result = await conn.fetch("SELECT user_id FROM users")
