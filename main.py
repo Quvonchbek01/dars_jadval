@@ -112,6 +112,10 @@ async def broadcast_message(message: Message, state: FSMContext):
     await message.answer(f"✅ {sent_count} ta foydalanuvchiga yuborildi.", reply_markup=admin_panel)
     await state.clear()
 
+# ✅ Server ishlayotganini tekshirish uchun / endpoint
+async def health_check(request):
+    return web.Response(text="✅ Bot is running!")
+
 # ✅ Webhook o'rnatish
 async def on_startup():
     await create_db()  # Baza faqat bir marta yaratiladi
@@ -119,6 +123,7 @@ async def on_startup():
 
 # ✅ Aiohttp server
 app = web.Application()
+app.router.add_get("/", health_check)  # 🎯 GET sorovi uchun endpoint qo'shdik
 SimpleRequestHandler(dispatcher=dp, bot=bot).register(app, path="/webhook")
 setup_application(app, dp)
 
