@@ -14,12 +14,13 @@ from dotenv import load_dotenv
 
 from db import register_user, get_user_stats, save_feedback, get_total_users, get_daily_users, get_all_users, create_db
 
-# .env fayldan token olish
+# .env fayldan token va port olish
 load_dotenv()
 TOKEN = os.getenv("BOT_TOKEN")
 WEBHOOK_URL = os.getenv("WEBHOOK_URL")
+PORT = int(os.getenv("PORT", 10000))  # Default port: 10000
 
-# Bot va dispatcher
+# Bot va Dispatcher
 bot = Bot(token=TOKEN)
 storage = MemoryStorage()
 dp = Dispatcher(storage=storage)
@@ -28,7 +29,7 @@ dp = Dispatcher(storage=storage)
 class UserState(StatesGroup):
     feedback = State()
 
-# 🎛️ Start menu
+# 🎛️ Start menyu
 start_menu = ReplyKeyboardMarkup(keyboard=[
     [KeyboardButton(text="📚 Dars jadvali", web_app=WebAppInfo(url="https://your-website.com"))],
     [KeyboardButton(text="📊 Statistika"), KeyboardButton(text="💬 Fikr bildirish")]
@@ -79,7 +80,7 @@ async def handle_feedback(message: Message, state: FSMContext):
 # 🛡 Admin panel
 @dp.message(Command("admin"))
 async def admin_panel_handler(message: Message):
-    if message.from_user.id == 5883662749 :  # Admin ID
+    if message.from_user.id == 5883662749:  # Admin ID
         await message.answer("🛡 Admin panelga xush kelibsiz!", reply_markup=admin_panel)
     else:
         await message.answer("❌ Sizda admin huquqlari yo'q.")
@@ -111,17 +112,19 @@ async def broadcast_message(message: Message, state: FSMContext):
     await message.answer(f"✅ {sent_count} ta foydalanuvchiga yuborildi.", reply_markup=admin_panel)
     await state.clear()
 
-# Webhook o'rnatish
+# ✅ Webhook o'rnatish
 async def on_startup():
     await create_db()  # Baza faqat bir marta yaratiladi
     await bot.set_webhook(WEBHOOK_URL)
 
-# Aiohttp server
+# ✅ Aiohttp server
 app = web.Application()
 SimpleRequestHandler(dispatcher=dp, bot=bot).register(app, path="/webhook")
 setup_application(app, dp)
 
+# ✅ Render server uchun to‘g‘ri loop
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    asyncio.run(on_startup())
-    web.run_app(app, host="0.0.0.0", port=8080)
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(on_startup())
+    web.run_app(app, host="0.0.0.0", port=PORT)
