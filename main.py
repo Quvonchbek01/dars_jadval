@@ -1,53 +1,48 @@
 from aiogram import Bot, Dispatcher, types
-from aiogram.types import WebAppInfo, Message
+from aiogram.types import Message, KeyboardButton, ReplyKeyboardMarkup, WebAppInfo
 from aiogram.filters import Command
-from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.fsm.context import FSMContext
+from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.fsm.state import State, StatesGroup
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
 from aiohttp import web
-import logging
-import asyncio
 import os
+import asyncio
 from dotenv import load_dotenv
+from db import register_user, get_user_stats, save_feedback, get_total_users, get_top_users, get_all_users, create_db
 
-# ✅ Database funksiyalar
-from db import register_user, get_user_stats, save_feedback, get_total_users, get_daily_users, get_all_users, create_db
-
-# ✅ .env fayldan token va port olish
 load_dotenv()
+
 TOKEN = os.getenv("BOT_TOKEN")
 WEBHOOK_URL = os.getenv("WEBHOOK_URL")
-PORT = int(os.getenv("PORT", 10000))  # Default port: 10000
+PORT = int(os.getenv("PORT", 10000))
 
-# ✅ Bot va Dispatcher
 bot = Bot(token=TOKEN)
-storage = MemoryStorage()
-dp = Dispatcher(storage=storage)
+dp = Dispatcher(storage=MemoryStorage())
+
 
 # ✅ FSM uchun state
 class UserState(StatesGroup):
     feedback = State()
     broadcast = State()
 
-# ✅ Asosiy menyu
+
+# ✅ Menyular
 start_menu = ReplyKeyboardMarkup(keyboard=[
-    [KeyboardButton(text="📚 Dars jadvali", web_app=WebAppInfo(url="https://imjadval.netlify.app"))],
-    [KeyboardButton(text="📊 Statistika"), KeyboardButton(text="💬 Fikr bildirish")]
+    [KeyboardButton(text="📊 Statistika")],
+    [KeyboardButton(text="💬 Fikr bildirish")],
 ], resize_keyboard=True)
 
-# ✅ Admin panel
 admin_panel = ReplyKeyboardMarkup(keyboard=[
-    [KeyboardButton(text="📈 Foydalanuvchilar statistikasini ko'rish")],
-    [KeyboardButton(text="📨 Broadcast")],
-    [KeyboardButton(text="⬅️ Orqaga")]
+    [KeyboardButton(text="📈 Barcha statistika")],
+    [KeyboardButton(text="📢 Broadcast")],
+    [KeyboardButton(text="⬅️ Orqaga")],
 ], resize_keyboard=True)
 
-# ✅ Orqaga tugma
 back_button = ReplyKeyboardMarkup(keyboard=[
     [KeyboardButton(text="⬅️ Orqaga")]
 ], resize_keyboard=True)
+
 
 # ✅ /start handler
 @dp.message(Command("start"))
@@ -55,29 +50,15 @@ async def start_handler(message: Message):
     user_id = message.from_user.id
     user_name = message.from_user.full_name
     await register_user(user_id, user_name)
-    await message.answer("👋 Assalomu alaykum! Dars jadval botiga xush kelibsiz!", reply_markup=start_menu)
+    await message.answer("👋 Assalomu alaykum!", reply_markup=start_menu)
+
 
 # ✅ 📊 Statistika
 @dp.message(lambda message: message.text == "📊 Statistika")
 async def show_stats(message: Message):
     user_id = message.from_user.id
-    user_usage = await get_user_stats(user_id)
-    total_users = await get_total_users()
-    top_users = await get_top_users()
-
-    top_users_text = ""
-    for i, user in enumerate(top_users, start=1):
-        top_users_text += f"{i}. {user['full_name']} — {user['usage_count']} marta\n"
-
-    await message.answer(f"""
-📈 **Statistika**:
-
-👤 Sizning foydalanish soningiz: {user_usage} marta
-👥 Jami foydalanuvchilar: {total_users}
-
-🔥 **Top 5 eng faol foydalanuvchilar:**
-{top_users_text}
-    """, parse_mode="Markdown")
+    stats = await get_user_stats(user_id)
+    await message.answer(f"✅ Umumiy foydalanishlar soni: {stats['usage_count']}")
 
 
 # ✅ 💬 Fikr bildirish
@@ -86,7 +67,7 @@ async def start_feedback(message: Message, state: FSMContext):
     await state.set_state(UserState.feedback)
     await message.answer("✍️ Fikringizni yozing:", reply_markup=back_button)
 
-# ✅ 💬 Fikrni qabul qilish
+
 @dp.message(UserState.feedback)
 async def handle_feedback(message: Message, state: FSMContext):
     if message.text == "⬅️ Orqaga":
@@ -96,87 +77,58 @@ async def handle_feedback(message: Message, state: FSMContext):
     
     user_id = message.from_user.id
     feedback_text = message.text
-    
-    # ✅ Fikrni saqlash
     await save_feedback(user_id, feedback_text)
     
-    # ✅ Admin ID'ga yuborish
     admin_id = 5883662749  # Admin ID
-    await bot.send_message(admin_id, f"💬 Yangi fikr: \n\n{feedback_text}\n\n👤 [{message.from_user.full_name}](tg://user?id={user_id})", parse_mode="Markdown")
+    await bot.send_message(admin_id, f"💬 Yangi feedback:\n\n{feedback_text}\n\n👤 [{message.from_user.full_name}](tg://user?id={user_id})", parse_mode="Markdown")
     
     await message.answer("✅ Fikringiz adminga yuborildi.", reply_markup=start_menu)
     await state.clear()
 
-# ✅ 🛡 Admin panel
+
+# ✅ Admin panel
 @dp.message(Command("admin"))
 async def admin_panel_handler(message: Message):
-    if message.from_user.id == 5883662749:  # Admin ID
+    if message.from_user.id == 5883662749:
         await message.answer("🛡 Admin panelga xush kelibsiz!", reply_markup=admin_panel)
     else:
-        await message.answer("❌ Sizda admin huquqlari yo'q.")
+        await message.answer("❌ Sizda admin huquqi yo'q.")
 
-# ✅ 📈 Foydalanuvchilar statistikasi
-@dp.message(lambda message: message.text == "📈 Foydalanuvchilar statistikasini ko'rish")
+
+# ✅ 📈 Barcha statistikalar
+@dp.message(lambda message: message.text == "📈 Barcha statistika")
 async def admin_stats(message: Message):
     total_users = await get_total_users()
-    daily_users = await get_daily_users()
-    await message.answer(f"👤 Jami foydalanuvchilar: {total_users}\n📈 Bugungi foydalanuvchilar: {daily_users}")
+    top_users = await get_top_users()
 
-# ✅ 📨 Mass xabar yuborish
-@dp.message(lambda message: message.text == "📨 Broadcast")
-async def broadcast_start(message: Message, state: FSMContext):
-    await state.set_state(UserState.broadcast)
-    await message.answer("✍️ Yuboriladigan xabar matnini kiriting:", reply_markup=back_button)
+    top_text = "\n".join([f"{user['full_name']} — {user['usage_count']} marta" for user in top_users])
 
-# ✅ 📩 Mass xabar yuborish logikasi
-@dp.message(UserState.broadcast)
-async def broadcast_message(message: Message, state: FSMContext):
-    if message.text == "⬅️ Orqaga":
-        await state.clear()
-        await message.answer("🔙 Admin panelga qaytdingiz.", reply_markup=admin_panel)
-        return
+    await message.answer(f"👤 Jami foydalanuvchilar: {total_users}\n\n🔥 Top 5 userlar:\n{top_text}")
 
-    users = await get_all_users()
-    sent_count = 0
-    for user_id in users:
-        try:
-            await bot.send_message(user_id, message.text)
-            sent_count += 1
-        except:
-            continue
-    await message.answer(f"✅ {sent_count} ta foydalanuvchiga yuborildi.", reply_markup=admin_panel)
-    await state.clear()
 
-# ✅ 🔙 Orqaga qaytish handleri
-@dp.message(lambda message: message.text == "⬅️ Orqaga")
-async def go_back(message: Message, state: FSMContext):
-    await state.clear()
-    if message.from_user.id == 5883662749:  # Admin bo'lsa
-        await message.answer("🔙 Asosiy menyuga qaytdingiz.", reply_markup=start_menu)
-    else:
-        await message.answer("🔙 Asosiy menyuga qaytdingiz.", reply_markup=start_menu)
-
-# ✅ Uptimerobot uchun GET so'rovni qabul qiladigan route
+# ✅ Uptimerobot uchun GET so'rovi
 async def handle_get_request(request):
     return web.Response(text="✅ Bot ishlayapti!")
+
 
 # ✅ Webhook o'rnatish
 async def on_startup():
     await create_db()
     await bot.set_webhook(f"{WEBHOOK_URL}/webhook")
 
+
 # ✅ Aiohttp server
 app = web.Application()
 SimpleRequestHandler(dispatcher=dp, bot=bot).register(app, path="/webhook")
 setup_application(app, dp)
-app.router.add_get("/", handle_get_request)  
+app.router.add_get("/", handle_get_request)
+
 
 # ✅ Asosiy async loop
 async def main():
     await on_startup()
     await web._run_app(app, host="0.0.0.0", port=PORT)
 
-# ✅ Botni ishga tushirish
+
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
     asyncio.run(main())
