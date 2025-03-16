@@ -12,38 +12,39 @@ import asyncio
 import os
 from dotenv import load_dotenv
 
+# ✅ Database funksiyalar
 from db import register_user, get_user_stats, save_feedback, get_total_users, get_daily_users, get_all_users, create_db
 
-# .env fayldan token va port olish
+# ✅ .env fayldan token va port olish
 load_dotenv()
 TOKEN = os.getenv("BOT_TOKEN")
 WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 PORT = int(os.getenv("PORT", 10000))  # Default port: 10000
 
-# Bot va Dispatcher
+# ✅ Bot va Dispatcher
 bot = Bot(token=TOKEN)
 storage = MemoryStorage()
 dp = Dispatcher(storage=storage)
 
-# FSM uchun state
+# ✅ FSM uchun state
 class UserState(StatesGroup):
     feedback = State()
     broadcast = State()
 
-# 🎛️ Start menyu
+# ✅ Start menyu
 start_menu = ReplyKeyboardMarkup(keyboard=[
-    [KeyboardButton(text="📚 Dars jadvali", web_app=WebAppInfo(url="https://your-website.com"))],
+    [KeyboardButton(text="📚 Dars jadvali", web_app=WebAppInfo(url="https://imjadval.netlify.app"))],
     [KeyboardButton(text="📊 Statistika"), KeyboardButton(text="💬 Fikr bildirish")]
 ], resize_keyboard=True)
 
-# 🎛️ Admin panel
+# ✅ Admin panel
 admin_panel = ReplyKeyboardMarkup(keyboard=[
     [KeyboardButton(text="📈 Foydalanuvchilar statistikasini ko'rish")],
-    [KeyboardButton(text="📨 Mass xabar yuborish")],
+    [KeyboardButton(text="📨 Broadcast")],
     [KeyboardButton(text="⬅️ Orqaga")]
 ], resize_keyboard=True)
 
-# 🎛️ Orqaga tugma
+# ✅ Orqaga tugma
 back_button = ReplyKeyboardMarkup(keyboard=[
     [KeyboardButton(text="⬅️ Orqaga")]
 ], resize_keyboard=True)
@@ -56,20 +57,20 @@ async def start_handler(message: Message):
     await register_user(user_id, user_name)
     await message.answer("👋 Assalomu alaykum! Dars jadval botiga xush kelibsiz!", reply_markup=start_menu)
 
-# 📊 Statistika
+# ✅ 📊 Statistika
 @dp.message(lambda message: message.text == "📊 Statistika")
 async def show_stats(message: Message):
     user_id = message.from_user.id
     stats = await get_user_stats(user_id)
-    await message.answer(f"📅 Oxirgi faolligingiz: {stats['last_active']}\n✅ Umumiy foydalanishlar soni: {stats['usage_count']}")
+    await message.answer(f"📅 Oxirgi faollik: {stats['last_active']}\n✅ Umumiy foydalanishlar soni: {stats['usage_count']}")
 
-# 💬 Fikr bildirish
+# ✅ 💬 Fikr bildirish
 @dp.message(lambda message: message.text == "💬 Fikr bildirish")
 async def start_feedback(message: Message, state: FSMContext):
     await state.set_state(UserState.feedback)
     await message.answer("✍️ Fikringizni yozing:", reply_markup=back_button)
 
-# 💬 Fikrlarni qabul qilish + adminga yuborish
+# ✅ 💬 Fikrni qabul qilish + Adminga yuborish
 @dp.message(UserState.feedback)
 async def handle_feedback(message: Message, state: FSMContext):
     if message.text == "⬅️ Orqaga":
@@ -80,17 +81,17 @@ async def handle_feedback(message: Message, state: FSMContext):
     user_id = message.from_user.id
     feedback_text = message.text
     
-    # Fikrni bazaga saqlash
+    # ✅ Fikrni bazaga saqlash
     await save_feedback(user_id, feedback_text)
     
-    # Fikrni admin ID'siga yuborish
+    # ✅ Admin ID'ga yuborish
     admin_id = 5883662749  # Admin ID
     await bot.send_message(admin_id, f"💬 Yangi fikr: \n\n{feedback_text}\n\n👤 Fikr egasi: [{message.from_user.full_name}](tg://user?id={user_id})", parse_mode="Markdown")
     
     await message.answer("✅ Fikringiz adminga yuborildi.", reply_markup=start_menu)
     await state.clear()
 
-# 🛡 Admin panel
+# ✅ 🛡 Admin panel
 @dp.message(Command("admin"))
 async def admin_panel_handler(message: Message):
     if message.from_user.id == 5883662749:  # Admin ID
@@ -98,20 +99,20 @@ async def admin_panel_handler(message: Message):
     else:
         await message.answer("❌ Sizda admin huquqlari yo'q.")
 
-# 📈 Foydalanuvchilar statistikasi
+# ✅ 📈 Foydalanuvchilar statistikasi
 @dp.message(lambda message: message.text == "📈 Foydalanuvchilar statistikasini ko'rish")
 async def admin_stats(message: Message):
     total_users = await get_total_users()
     daily_users = await get_daily_users()
     await message.answer(f"👤 Jami foydalanuvchilar: {total_users}\n📈 Bugungi foydalanuvchilar: {daily_users}")
 
-# 📨 Mass xabar yuborish
-@dp.message(lambda message: message.text == "📨 Mass xabar yuborish")
+# ✅ 📨 Mass xabar yuborish
+@dp.message(lambda message: message.text == "📨 Broadcast")
 async def broadcast_start(message: Message, state: FSMContext):
     await state.set_state(UserState.broadcast)
     await message.answer("✍️ Yuboriladigan xabar matnini kiriting:", reply_markup=back_button)
 
-# 📩 Mass xabar yuborish logikasi
+# ✅ 📩 Mass xabar yuborish logikasi
 @dp.message(UserState.broadcast)
 async def broadcast_message(message: Message, state: FSMContext):
     if message.text == "⬅️ Orqaga":
@@ -138,10 +139,14 @@ async def handle_get_request(request):
 async def on_startup():
     await create_db()  # Baza faqat bir marta yaratiladi
     await bot.set_webhook(f"{WEBHOOK_URL}/webhook")
+    
+    # 🎯 Muammo yechimi: Dispatcher routerini ro'yxatdan o'tkazish
+    dp.include_router(dp.router)
 
 # ✅ Aiohttp server
 app = web.Application()
 SimpleRequestHandler(dispatcher=dp, bot=bot).register(app, path="/webhook")
+setup_application(app, dp)
 app.router.add_get("/", handle_get_request)  # GET so'rov uchun
 
 # ✅ Asosiy async loop
