@@ -55,7 +55,7 @@ async def start_handler(message: Message):
     user_id = message.from_user.id
     user_name = message.from_user.full_name
     await register_user(user_id, user_name)
-    await message.answer("👋 Assalomu alaykum! Dars jadval botiga xush kelibsiz!", reply_markup=start_menu)
+    await message.answer("👋 Assalomu alaykum!/nForish IM dars jadvali botiga xush kelibsiz!", reply_markup=start_menu)
 
 # ✅ 📊 Statistika
 @dp.message(lambda message: message.text == "📊 Statistika")
@@ -68,7 +68,7 @@ async def show_stats(message: Message):
 @dp.message(lambda message: message.text == "💬 Fikr bildirish")
 async def start_feedback(message: Message, state: FSMContext):
     await state.set_state(UserState.feedback)
-    await message.answer("✍️ Fikringizni yozing:", reply_markup=back_button)
+    await message.answer("✍️ Botimiz sizga yoqdimi?/n1 dan 10 gacha baholang. Botimiz haqida fikr bildiring. Yana qanday imkoniyatlar qo'shilishini xohlar edingiz? Talab va takliflarni ham yozib qoldirishingiz mumkin, siz bilan tez orada bog'lanaman. Rahmat!", reply_markup=back_button)
 
 # ✅ 💬 Fikrni qabul qilish
 @dp.message(UserState.feedback)
@@ -86,9 +86,9 @@ async def handle_feedback(message: Message, state: FSMContext):
 
     # ✅ Admin ID'ga yuborish
     admin_id = 5883662749  # Admin ID
-    await bot.send_message(admin_id, f"💬 Yangi fikr: \n\n{feedback_text}\n\n👤 [{message.from_user.full_name}](tg://user?id={user_id})", parse_mode="Markdown")
+    await bot.send_message(admin_id, f"💬 Yangi xabar: \n\n{feedback_text}\n\n👤 [{message.from_user.full_name}](tg://user?id={user_id})", parse_mode="Markdown")
 
-    await message.answer("✅ Fikringiz adminga yuborildi.", reply_markup=start_menu)
+    await message.answer("✅ Xabaringiz adminga yuborildi.", reply_markup=start_menu)
     await state.clear()
 
 # ✅ 🛡 Admin panel
