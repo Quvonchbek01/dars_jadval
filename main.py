@@ -55,7 +55,7 @@ async def start_handler(message: Message):
     user_id = message.from_user.id
     user_name = message.from_user.full_name
     await register_user(user_id, user_name)
-    await message.answer("👋 Assalomu alaykum!/nForish IM dars jadvali botiga xush kelibsiz!", reply_markup=start_menu)
+    await message.answer("👋 Assalomu alaykum! Forish IM dars jadvali botiga xush kelibsiz!", reply_markup=start_menu)
 
 # ✅ 📊 Statistika
 @dp.message(lambda message: message.text == "📊 Statistika")
