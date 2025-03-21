@@ -68,7 +68,7 @@ async def show_stats(message: Message):
 @dp.message(lambda message: message.text == "💬 Fikr bildirish")
 async def start_feedback(message: Message, state: FSMContext):
     await state.set_state(UserState.feedback)
-    await message.answer("✍️ Botimiz sizga yoqdimi?/n1 dan 10 gacha baholang. Botimiz haqida fikr bildiring. Yana qanday imkoniyatlar qo'shilishini xohlar edingiz? Talab va takliflarni ham yozib qoldirishingiz mumkin, siz bilan tez orada bog'lanaman. Rahmat!", reply_markup=back_button)
+    await message.answer("✍️ Botimiz sizga yoqdimi? 1 dan 10 gacha baholang. Botimiz haqida fikr bildiring. Yana qanday imkoniyatlar qo'shilishini xohlar edingiz? Talab va takliflarni ham yozib qoldirishingiz mumkin, siz bilan tez orada bog'lanaman. Rahmat!", reply_markup=back_button)
 
 # ✅ 💬 Fikrni qabul qilish
 @dp.message(UserState.feedback)
