@@ -128,6 +128,7 @@ async def handle_get_request(request):
 
 # ✅ Webhook o‘rnatish
 async def on_startup():
+    await bot.delete_webhook(drop_pending_updates=True)
     await create_db()
     await bot.set_webhook(f"{WEBHOOK_URL}/webhook")
 
