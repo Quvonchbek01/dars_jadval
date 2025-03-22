@@ -82,7 +82,7 @@ async def handle_feedback(message: Message, state: FSMContext):
 @dp.message(Command("admin"))
 async def admin_panel_handler(message: Message):
     if message.from_user.id == ADMIN_ID:
-        message.answer("🛡 Admin panelga xush kelibsiz!", reply_markup=admin_panel)
+        await message.answer("🛡 Admin panelga xush kelibsiz!", reply_markup=admin_panel)
     else:
         await message.answer("❌ Sizda admin huquqlari yo‘q.")
 
