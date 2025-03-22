@@ -120,7 +120,7 @@ async def broadcast_message(message: Message, state: FSMContext):
 @dp.message(lambda message: message.text == "⬅️ Orqaga")
 async def go_back(message: Message, state: FSMContext):
     await state.clear()
-    await message.answer("🔙 Asosiy menyuga qaytdingiz.", reply_markup=start_menu if message.from_user.id != ADMIN_ID else admin_panel)
+    await message.answer("🔙 Asosiy menyuga qaytdingiz.", reply_markup=start_menu)
 
 # ✅ Uptimerobot uchun GET request
 async def handle_get_request(request):
