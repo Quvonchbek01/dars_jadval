@@ -16,6 +16,7 @@ load_dotenv()
 TOKEN = os.getenv("BOT_TOKEN")
 WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 PORT = int(os.getenv("PORT", 10000))
+ADMIN_ID = 5883662749
 
 # ✅ Bot va Dispatcher
 bot = Bot(token=TOKEN)
@@ -48,7 +49,7 @@ back_button = ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text="⬅️ Orqaga"
 @dp.message(Command("start"))
 async def start_handler(message: Message):
     await register_user(message.from_user.id, message.from_user.full_name)
-    await message.answer("👋 Assalomu alaykum! Botga xush kelibsiz!", reply_markup=start_menu)
+    await message.answer("👋 Assalomu alaykum! Forish IM dars jadvali botiga xush kelibsiz!", reply_markup=start_menu)
 
 # ✅ 📊 Statistika
 @dp.message(lambda message: message.text == "📊 Statistika")
@@ -63,7 +64,7 @@ async def show_stats(message: Message):
 @dp.message(lambda message: message.text == "💬 Fikr bildirish")
 async def start_feedback(message: Message, state: FSMContext):
     await state.set_state(UserState.feedback)
-    await message.answer("✍️ Fikringizni yozing:", reply_markup=back_button)
+    await message.answer("✍️ Botimiz sizga yoqdimi? 1 dan 10 gacha baholang. Botimiz haqida fikr bildiring. Yana qanday imkoniyatlar qo'shilishini xohlar edingiz? Talab va takliflarni ham yozib qoldirishingiz mumkin, siz bilan tez orada bog'lanaman. Rahmat!", reply_markup=back_button)
 
 @dp.message(UserState.feedback)
 async def handle_feedback(message: Message, state: FSMContext):
@@ -73,15 +74,15 @@ async def handle_feedback(message: Message, state: FSMContext):
         return
 
     await save_feedback(message.from_user.id, message.text)
-    await bot.send_message(5883662749, f"💬 Yangi fikr: {message.text}\n👤 [{message.from_user.full_name}](tg://user?id={message.from_user.id})", parse_mode="Markdown")
-    await message.answer("✅ Fikringiz yuborildi.", reply_markup=start_menu)
+    await bot.send_message(ADMIN_ID, f"💬 Yangi fikr: {message.text}\n👤 [{message.from_user.full_name}](tg://user?id={message.from_user.id})", parse_mode="Markdown")
+    await message.answer("✅ Xabaringiz adminga yuborildi.", reply_markup=start_menu)
     await state.clear()
 
 # ✅ 🛡 Admin panel
 @dp.message(Command("admin"))
 async def admin_panel_handler(message: Message):
-    if message.from_user.id == 5883662749:
-        await message.answer("🛡 Admin panelga xush kelibsiz!", reply_markup=admin_panel)
+    if message.from_user.id == ADMIN_ID:
+        message.answer("🛡 Admin panelga xush kelibsiz!", reply_markup=admin_panel)
     else:
         await message.answer("❌ Sizda admin huquqlari yo‘q.")
 
@@ -119,7 +120,7 @@ async def broadcast_message(message: Message, state: FSMContext):
 @dp.message(lambda message: message.text == "⬅️ Orqaga")
 async def go_back(message: Message, state: FSMContext):
     await state.clear()
-    await message.answer("🔙 Asosiy menyuga qaytdingiz.", reply_markup=start_menu if message.from_user.id != 5883662749 else admin_panel)
+    await message.answer("🔙 Asosiy menyuga qaytdingiz.", reply_markup=start_menu if message.from_user.id != ADMIN_ID else admin_panel)
 
 # ✅ Uptimerobot uchun GET request
 async def handle_get_request(request):
