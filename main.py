@@ -56,7 +56,7 @@ async def start_handler(message: Message):
 async def show_stats(message: Message):
     stats = await get_user_stats(message.from_user.id)
     if stats:
-        await message.answer(f"📅 Oxirgi faollik: {stats['last_active']}\n✅ Umumiy foydalanishlar soni: {stats['usage_count']}")
+        await message.answer(f"📅 Oxirgi faollik: {stats['last_active']}\n✅ Umumiy faolligingiz: {stats['usage_count'] }")
     else:
         await message.answer("📊 Siz hali botdan foydalanmagansiz.")
 
